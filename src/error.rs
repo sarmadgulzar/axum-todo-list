@@ -8,6 +8,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum AppError {
+    #[error("Resource not found")]
+    NotFound,
     #[error("Database error: {0}")]
     DatabaseError(#[from] sqlx::Error),
     #[error("Internal server error")]
@@ -17,6 +19,7 @@ pub enum AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, message) = match self {
+            AppError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
             AppError::DatabaseError(_err) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal server error".to_string(),

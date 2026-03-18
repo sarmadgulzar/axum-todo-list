@@ -11,5 +11,6 @@ pub fn create_router(state: AppState) -> Router {
             "/todos",
             routing::get(handlers::list_todos).post(handlers::create_todo),
         )
+        .route("/todos/{id}", routing::get(handlers::get_todo))
         .with_state(state)
 }

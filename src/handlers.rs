@@ -1,8 +1,8 @@
 use axum::Json;
-use axum::extract::State;
+use axum::extract::{Path, State};
 use uuid::Uuid;
 
-use crate::error::Result;
+use crate::error::{AppError, Result};
 use crate::models::Todo;
 use crate::schemas::CreateTodo;
 use crate::state::AppState;
@@ -56,6 +56,31 @@ pub async fn create_todo(
     )
     .fetch_one(&state.db)
     .await?;
+
+    Ok(Json(todo))
+}
+
+pub async fn get_todo(State(state): State<AppState>, Path(id): Path<Uuid>) -> Result<Json<Todo>> {
+    let todo = sqlx::query_as!(
+        Todo,
+        r#"
+        SELECT
+            id AS "id!: _",
+            title,
+            completed,
+            created_at AS "created_at!: _",
+            updated_at AS "updated_at!: _"
+        FROM todos
+        WHERE id = $1
+        "#,
+        id,
+    )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => AppError::NotFound,
+        _ => AppError::from(e),
+    })?;
 
     Ok(Json(todo))
 }
