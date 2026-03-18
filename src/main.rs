@@ -1,4 +1,5 @@
 use axum_todo_list::router;
+use axum_todo_list::state::AppState;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use std::net::Ipv4Addr;
 use std::str::FromStr;
@@ -19,7 +20,8 @@ async fn main() {
         .await
         .expect("Failed to run migrations");
 
-    let app = router::create_router();
+    let state = AppState { db: pool };
+    let app = router::create_router(state);
 
     let addr = Ipv4Addr::new(127, 0, 0, 1);
     let port = 8080;
