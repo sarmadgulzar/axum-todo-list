@@ -1,12 +1,12 @@
-use std::net::Ipv4Addr;
+mod handlers;
+mod router;
 
-use axum::Router;
-use axum::routing;
+use std::net::Ipv4Addr;
 use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/", routing::get(|| async { "Hello world!" }));
+    let app = router::create_router();
 
     let addr = Ipv4Addr::new(127, 0, 0, 1);
     let port = 8080;
