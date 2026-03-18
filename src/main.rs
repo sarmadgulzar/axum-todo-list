@@ -1,5 +1,7 @@
 mod handlers;
 mod router;
+#[cfg(test)]
+mod tests;
 
 use std::net::Ipv4Addr;
 use tokio::net::TcpListener;
