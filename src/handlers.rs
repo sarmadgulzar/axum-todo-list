@@ -37,9 +37,9 @@ pub async fn list_todos(State(state): State<AppState>) -> Result<Json<Vec<Todo>>
 pub async fn create_todo(
     State(state): State<AppState>,
     Json(payload): Json<CreateTodo>,
-) -> Result<Json<Vec<Todo>>> {
+) -> Result<Json<Todo>> {
     let id = Uuid::now_v7();
-    let todos = sqlx::query_as!(
+    let todo = sqlx::query_as!(
         Todo,
         r#"
         INSERT INTO todos (id, title)
@@ -54,8 +54,8 @@ pub async fn create_todo(
         id,
         payload.title
     )
-    .fetch_all(&state.db)
+    .fetch_one(&state.db)
     .await?;
 
-    Ok(Json(todos))
+    Ok(Json(todo))
 }
