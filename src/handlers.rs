@@ -84,6 +84,33 @@ pub async fn get_todo(State(state): State<AppState>, Path(id): Path<Uuid>) -> Re
 
     Ok(Json(todo))
 }
+pub async fn delete_todo(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Todo>> {
+    let todo = sqlx::query_as!(
+        Todo,
+        r#"
+        DELETE FROM todos
+        WHERE id = $1
+        RETURNING
+            id AS "id!: _",
+            title,
+            completed,
+            created_at AS "created_at!: _",
+            updated_at AS "updated_at!: _"
+        "#,
+        id,
+    )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => AppError::NotFound,
+        _ => AppError::from(e),
+    })?;
+
+    Ok(Json(todo))
+}
 
 pub async fn todo_mark_complete(
     State(state): State<AppState>,
