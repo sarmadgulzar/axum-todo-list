@@ -7,5 +7,6 @@ pub fn create_router(state: AppState) -> Router {
     Router::new()
         .route("/", routing::get(handlers::root))
         .route("/health", routing::get(handlers::health))
+        .route("/todos", routing::get(handlers::list_todos))
         .with_state(state)
 }

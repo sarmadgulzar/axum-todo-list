@@ -6,6 +6,9 @@ edition = "2024"
 [dependencies]
 axum = "0.8.8"
 axum-test = "19.1.1"
-sqlx = { version = "0.8.6", features = ["macros", "runtime-tokio-rustls", "sqlite"] }
+chrono = { version = "0.4.44", features = ["serde"] }
+serde = { version = "1.0.228", features = ["derive"] }
+sqlx = { version = "0.8.6", features = ["chrono", "macros", "runtime-tokio-rustls", "sqlite", "uuid"] }
 thiserror = "2.0.18"
 tokio = { version = "1.50.0", features = ["full"] }
+uuid = { version = "1.22.0", features = ["serde", "v7"] }

@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT\n            id AS \"id!: _\",\n            title,\n            completed,\n            created_at AS \"created_at!: _\",\n            updated_at AS \"updated_at!: _\"\n        FROM todos\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: _",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "completed",
+        "ordinal": 2,
+        "type_info": "Bool"
+      },
+      {
+        "name": "created_at!: _",
+        "ordinal": 3,
+        "type_info": "Null"
+      },
+      {
+        "name": "updated_at!: _",
+        "ordinal": 4,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6abeade6863b9e86771223763f27e1a2bda0ad323cb319f2494f2cbaf1a62b6f"
+}
