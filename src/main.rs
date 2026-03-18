@@ -1,9 +1,24 @@
 use axum_todo_list::router;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use std::net::Ipv4Addr;
+use std::str::FromStr;
 use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() {
+    let options = SqliteConnectOptions::from_str("sqlite:todo.db")
+        .unwrap()
+        .create_if_missing(true);
+
+    let pool = SqlitePool::connect_with(options)
+        .await
+        .expect("Failed to connect to SQLite");
+
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Failed to run migrations");
+
     let app = router::create_router();
 
     let addr = Ipv4Addr::new(127, 0, 0, 1);
