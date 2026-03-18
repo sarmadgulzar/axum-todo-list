@@ -12,5 +12,13 @@ pub fn create_router(state: AppState) -> Router {
             routing::get(handlers::list_todos).post(handlers::create_todo),
         )
         .route("/todos/{id}", routing::get(handlers::get_todo))
+        .route(
+            "/todos/{id}/mark-complete",
+            routing::post(handlers::todo_mark_complete),
+        )
+        .route(
+            "/todos/{id}/mark-incomplete",
+            routing::post(handlers::todo_mark_incomplete),
+        )
         .with_state(state)
 }
