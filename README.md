@@ -1,4 +1,6 @@
-# axum-todo-list
+# A simple to-do list app bult with Axum
+
+https://github.com/user-attachments/assets/a2c556f6-d38d-4d20-94e2-da3dc50633d2
 
 A small JSON todo API built with Rust, Axum, SQLx, and SQLite.
 
