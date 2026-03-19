@@ -212,6 +212,92 @@
                 gap: 12px;
             }
 
+            .filter-panel {
+                margin-top: 16px;
+                padding: 18px;
+                border-radius: 24px;
+                border: 1px solid rgba(36, 29, 24, 0.08);
+                background: rgba(255, 255, 255, 0.52);
+                display: grid;
+                gap: 14px;
+            }
+
+            .filter-grid {
+                display: grid;
+                gap: 12px;
+                grid-template-columns:
+                    minmax(0, 1.8fr) minmax(180px, 0.9fr)
+                    auto;
+                align-items: end;
+            }
+
+            .filter-field {
+                display: grid;
+                gap: 8px;
+            }
+
+            .field-label {
+                color: var(--muted);
+                font-size: 0.78rem;
+                text-transform: uppercase;
+                letter-spacing: 0.12em;
+            }
+
+            .compact-input {
+                min-height: 52px;
+                padding-top: 0;
+                padding-bottom: 0;
+            }
+
+            .todo-select {
+                width: 100%;
+                min-height: 52px;
+                border: 1px solid rgba(36, 29, 24, 0.14);
+                border-radius: 18px;
+                background: rgba(255, 255, 255, 0.9);
+                padding: 0 18px;
+                font: inherit;
+                font-size: 1rem;
+                color: var(--ink);
+                outline: none;
+                appearance: none;
+                transition:
+                    border-color 140ms ease,
+                    box-shadow 140ms ease;
+            }
+
+            .todo-select:focus {
+                border-color: rgba(200, 93, 56, 0.55);
+                box-shadow: 0 0 0 4px rgba(200, 93, 56, 0.1);
+            }
+
+            .filter-actions {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                align-items: center;
+            }
+
+            .pager {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+            }
+
+            .pager-controls {
+                display: inline-flex;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .pager-status {
+                color: var(--muted);
+                font-size: 0.92rem;
+                line-height: 1.5;
+            }
+
             .list-region {
                 margin-top: 16px;
                 flex: 1;
@@ -408,6 +494,14 @@
                     align-content: start;
                 }
 
+                .filter-grid {
+                    grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
+                }
+
+                .filter-actions {
+                    grid-column: 1 / -1;
+                }
+
                 .list-region {
                     overflow: visible;
                     padding-right: 0;
@@ -433,6 +527,24 @@
 
                 .primary-button {
                     min-height: 52px;
+                }
+
+                .filter-grid {
+                    grid-template-columns: 1fr;
+                }
+
+                .filter-actions,
+                .pager-controls {
+                    width: 100%;
+                }
+
+                .filter-actions > button,
+                .pager-controls > button {
+                    flex: 1 1 0;
+                }
+
+                .pager {
+                    align-items: stretch;
                 }
 
                 .todo-item {
@@ -461,15 +573,15 @@
 
                 <aside class="stats">
                     <div class="stat">
-                        <span class="stat-label">Remaining</span>
+                        <span class="stat-label">Shown active</span>
                         <span class="stat-value" x-text="remainingCount"></span>
                     </div>
                     <div class="stat">
-                        <span class="stat-label">Completed</span>
+                        <span class="stat-label">Shown done</span>
                         <span class="stat-value" x-text="completedCount"></span>
                     </div>
                     <div class="stat">
-                        <span class="stat-label">Total</span>
+                        <span class="stat-label">Shown total</span>
                         <span class="stat-value" x-text="todos.length"></span>
                     </div>
                 </aside>
@@ -513,7 +625,8 @@
                             type="button"
                             class="filter-button"
                             :class="{ active: filter === 'all' }"
-                            @click="filter = 'all'"
+                            @click="setFilter('all')"
+                            :disabled="loading"
                         >
                             All
                         </button>
@@ -521,7 +634,8 @@
                             type="button"
                             class="filter-button"
                             :class="{ active: filter === 'active' }"
-                            @click="filter = 'active'"
+                            @click="setFilter('active')"
+                            :disabled="loading"
                         >
                             Active
                         </button>
@@ -529,7 +643,8 @@
                             type="button"
                             class="filter-button"
                             :class="{ active: filter === 'completed' }"
-                            @click="filter = 'completed'"
+                            @click="setFilter('completed')"
+                            :disabled="loading"
                         >
                             Completed
                         </button>
@@ -540,7 +655,7 @@
                             type="button"
                             class="secondary-button"
                             @click="clearCompleted()"
-                            :disabled="completedCount === 0 || clearingCompleted"
+                            :disabled="!hasCompletedTodos || clearingCompleted"
                         >
                             <span x-show="!clearingCompleted"
                                 >Clear completed</span
@@ -561,6 +676,80 @@
                     </div>
                 </div>
 
+                <form class="filter-panel" @submit.prevent="applyFilters()">
+                    <div class="filter-grid">
+                        <label class="filter-field" for="todo-search">
+                            <span class="field-label">Title contains</span>
+                            <input
+                                id="todo-search"
+                                class="todo-input compact-input"
+                                type="search"
+                                x-model="titleFilter"
+                                placeholder="Search the current list"
+                                autocomplete="off"
+                                :disabled="loading"
+                            />
+                        </label>
+
+                        <label class="filter-field" for="todo-limit">
+                            <span class="field-label">Items per page</span>
+                            <select
+                                id="todo-limit"
+                                class="todo-select"
+                                x-model.number="limit"
+                                @change="applyFilters()"
+                                :disabled="loading"
+                            >
+                                <option :value="10">10</option>
+                                <option :value="25">25</option>
+                                <option :value="50">50</option>
+                                <option :value="100">100</option>
+                            </select>
+                        </label>
+
+                        <div class="filter-actions">
+                            <button
+                                type="submit"
+                                class="secondary-button"
+                                :disabled="loading"
+                            >
+                                Apply filters
+                            </button>
+                            <button
+                                type="button"
+                                class="ghost-button"
+                                @click="resetFilters()"
+                                :disabled="loading || !hasActiveFilters"
+                            >
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="pager">
+                        <div class="pager-controls">
+                            <button
+                                type="button"
+                                class="ghost-button"
+                                @click="previousPage()"
+                                :disabled="loading || offset === 0"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                type="button"
+                                class="ghost-button"
+                                @click="nextPage()"
+                                :disabled="loading || !hasMore"
+                            >
+                                Next
+                            </button>
+                        </div>
+
+                        <p class="pager-status" x-text="pageSummary"></p>
+                    </div>
+                </form>
+
                 <div class="list-region">
                     <section class="notice" x-show="loading" x-cloak>
                         Loading tasks...
@@ -575,10 +764,10 @@
 
                     <ul
                         class="todo-list"
-                        x-show="!loading && filteredTodos.length > 0"
+                        x-show="!loading && todos.length > 0"
                         x-cloak
                     >
-                        <template x-for="todo in filteredTodos" :key="todo.id">
+                        <template x-for="todo in todos" :key="todo.id">
                             <li
                                 class="todo-item"
                                 :class="{ completed: todo.completed }"
@@ -624,7 +813,7 @@
 
                     <section
                         class="empty-state"
-                        x-show="!loading && !error && filteredTodos.length === 0"
+                        x-show="!loading && !error && todos.length === 0"
                         x-cloak
                     >
                         <h2 x-text="emptyTitle"></h2>
@@ -640,6 +829,11 @@
                     todos: [],
                     newTitle: "",
                     filter: "all",
+                    titleFilter: "",
+                    limit: 10,
+                    offset: 0,
+                    hasMore: false,
+                    hasCompletedTodos: false,
                     loading: false,
                     saving: false,
                     clearingCompleted: false,
@@ -656,19 +850,63 @@
                             .length;
                     },
 
-                    get filteredTodos() {
+                    get normalizedLimit() {
+                        const parsed = Number.parseInt(this.limit, 10);
+
+                        if (Number.isNaN(parsed) || parsed < 1) {
+                            return 10;
+                        }
+
+                        return Math.min(parsed, 100);
+                    },
+
+                    get trimmedTitle() {
+                        return this.titleFilter.trim();
+                    },
+
+                    get hasActiveFilters() {
+                        return (
+                            this.filter !== "all" ||
+                            this.trimmedTitle !== "" ||
+                            this.normalizedLimit !== 10 ||
+                            this.offset !== 0
+                        );
+                    },
+
+                    get pageSummary() {
+                        if (this.loading) {
+                            return "Loading current page...";
+                        }
+
+                        if (this.todos.length === 0) {
+                            return "No tasks match the current filters.";
+                        }
+
+                        const start = this.offset + 1;
+                        const end = this.offset + this.todos.length;
+                        const page =
+                            Math.floor(this.offset / this.normalizedLimit) + 1;
+
+                        return `Page ${page} • Showing ${start}-${end}`;
+                    },
+
+                    get completedFilter() {
                         if (this.filter === "active") {
-                            return this.todos.filter((todo) => !todo.completed);
+                            return false;
                         }
 
                         if (this.filter === "completed") {
-                            return this.todos.filter((todo) => todo.completed);
+                            return true;
                         }
 
-                        return this.todos;
+                        return null;
                     },
 
                     get emptyTitle() {
+                        if (this.trimmedTitle) {
+                            return "No matching tasks";
+                        }
+
                         if (this.filter === "active") {
                             return "No active tasks";
                         }
@@ -681,6 +919,10 @@
                     },
 
                     get emptyBody() {
+                        if (this.trimmedTitle) {
+                            return `No task titles contain "${this.trimmedTitle}" with the current filters.`;
+                        }
+
                         if (this.filter === "active") {
                             return "Everything is either finished or waiting to be added.";
                         }
@@ -707,21 +949,59 @@
                         this.busyMap = next;
                     },
 
-                    replaceTodo(updatedTodo) {
-                        const index = this.todos.findIndex(
-                            (todo) => todo.id === updatedTodo.id,
-                        );
-
-                        if (index === -1) {
-                            this.todos.unshift(updatedTodo);
-                            return;
-                        }
-
-                        this.todos.splice(index, 1, updatedTodo);
-                    },
-
                     clearError() {
                         this.error = "";
+                    },
+
+                    buildQueryString(limitOverride = this.normalizedLimit) {
+                        const params = new URLSearchParams();
+
+                        if (this.trimmedTitle) {
+                            params.set("title", this.trimmedTitle);
+                        }
+
+                        if (this.completedFilter !== null) {
+                            params.set(
+                                "completed",
+                                String(this.completedFilter),
+                            );
+                        }
+
+                        params.set("limit", String(limitOverride));
+                        params.set("offset", String(this.offset));
+
+                        return params.toString();
+                    },
+
+                    async refreshCompletedState() {
+                        try {
+                            const params = new URLSearchParams({
+                                completed: "true",
+                                limit: "1",
+                                offset: "0",
+                            });
+
+                            const response = await fetch(
+                                `/todos?${params.toString()}`,
+                                {
+                                    headers: {
+                                        Accept: "application/json",
+                                    },
+                                },
+                            );
+
+                            if (!response.ok) {
+                                throw new Error(
+                                    "Failed to check completed tasks.",
+                                );
+                            }
+
+                            const todos = await response.json();
+                            this.hasCompletedTodos =
+                                Array.isArray(todos) && todos.length > 0;
+                        } catch (_error) {
+                            this.hasCompletedTodos = false;
+                        }
                     },
 
                     async loadTodos() {
@@ -729,26 +1009,144 @@
                         this.clearError();
 
                         try {
-                            const response = await fetch("/todos?limit=100", {
-                                headers: {
-                                    Accept: "application/json",
+                            const limit = this.normalizedLimit;
+                            const response = await fetch(
+                                `/todos?${this.buildQueryString(limit + 1)}`,
+                                {
+                                    headers: {
+                                        Accept: "application/json",
+                                    },
                                 },
-                            });
+                            );
 
                             if (!response.ok) {
                                 throw new Error("Failed to load tasks.");
                             }
 
                             const todos = await response.json();
-                            this.todos = Array.isArray(todos)
-                                ? todos.reverse()
-                                : [];
+                            const results = Array.isArray(todos) ? todos : [];
+                            this.hasMore = results.length > limit;
+                            this.todos = this.hasMore
+                                ? results.slice(0, limit)
+                                : results;
+                            await this.refreshCompletedState();
                         } catch (_error) {
                             this.error =
                                 "Unable to load tasks right now. Check that the server is running and try again.";
                         } finally {
                             this.loading = false;
                         }
+                    },
+
+                    async refreshAfterMutation({ resetOffset = false } = {}) {
+                        if (resetOffset) {
+                            this.offset = 0;
+                        }
+
+                        await this.loadTodos();
+
+                        while (
+                            this.todos.length === 0 &&
+                            this.offset > 0 &&
+                            !this.error
+                        ) {
+                            this.offset = Math.max(
+                                0,
+                                this.offset - this.normalizedLimit,
+                            );
+                            await this.loadTodos();
+                        }
+                    },
+
+                    async setFilter(nextFilter) {
+                        if (this.filter === nextFilter && this.offset === 0) {
+                            return;
+                        }
+
+                        this.filter = nextFilter;
+                        this.offset = 0;
+                        await this.loadTodos();
+                    },
+
+                    async applyFilters() {
+                        this.limit = this.normalizedLimit;
+                        this.offset = 0;
+                        await this.loadTodos();
+                    },
+
+                    async resetFilters() {
+                        this.filter = "all";
+                        this.titleFilter = "";
+                        this.limit = 10;
+                        this.offset = 0;
+                        await this.loadTodos();
+                    },
+
+                    async previousPage() {
+                        if (this.offset === 0) {
+                            return;
+                        }
+
+                        this.offset = Math.max(
+                            0,
+                            this.offset - this.normalizedLimit,
+                        );
+                        await this.loadTodos();
+                    },
+
+                    async nextPage() {
+                        if (!this.hasMore) {
+                            return;
+                        }
+
+                        this.offset += this.normalizedLimit;
+                        await this.loadTodos();
+                    },
+
+                    async listCompletedTodosForClear() {
+                        const completedTodos = [];
+                        const batchSize = 100;
+                        let offset = 0;
+
+                        while (true) {
+                            const params = new URLSearchParams({
+                                completed: "true",
+                                limit: String(batchSize),
+                                offset: String(offset),
+                            });
+
+                            const response = await fetch(
+                                `/todos?${params.toString()}`,
+                                {
+                                    headers: {
+                                        Accept: "application/json",
+                                    },
+                                },
+                            );
+
+                            if (!response.ok) {
+                                throw new Error(
+                                    "Failed to load completed tasks.",
+                                );
+                            }
+
+                            const todos = await response.json();
+                            const batch = Array.isArray(todos) ? todos : [];
+
+                            if (batch.length === 0) {
+                                break;
+                            }
+
+                            completedTodos.push(...batch);
+
+                            if (batch.length < batchSize) {
+                                break;
+                            }
+
+                            offset += batchSize;
+                        }
+
+                        return completedTodos;
                     },
 
                     async createTodo() {
@@ -775,9 +1173,11 @@
                                 throw new Error("Failed to create task.");
                             }
 
-                            const todo = await response.json();
-                            this.todos.unshift(todo);
+                            await response.json();
                             this.newTitle = "";
+                            await this.refreshAfterMutation({
+                                resetOffset: true,
+                            });
                             this.$refs.todoInput.focus();
                         } catch (_error) {
                             this.error =
@@ -807,8 +1207,8 @@
                                 throw new Error("Failed to update task.");
                             }
 
-                            const updated = await response.json();
-                            this.replaceTodo(updated);
+                            await response.json();
+                            await this.refreshAfterMutation();
                         } catch (_error) {
                             this.error =
                                 "Unable to update that task right now. Please try again.";
@@ -833,9 +1233,7 @@
                                 throw new Error("Failed to delete task.");
                             }
 
-                            this.todos = this.todos.filter(
-                                (item) => item.id !== todo.id,
-                            );
+                            await this.refreshAfterMutation();
                         } catch (_error) {
                             this.error =
                                 "Unable to delete that task right now. Please try again.";
@@ -845,16 +1243,25 @@
                     },
 
                     async clearCompleted() {
-                        const completedTodos = this.todos.filter(
-                            (todo) => todo.completed,
-                        );
+                        this.clearError();
+
+                        let completedTodos;
+
+                        try {
+                            completedTodos =
+                                await this.listCompletedTodosForClear();
+                        } catch (_error) {
+                            this.error =
+                                "Unable to load completed tasks right now. Please try again.";
+                            return;
+                        }
 
                         if (completedTodos.length === 0) {
+                            this.hasCompletedTodos = false;
                             return;
                         }
 
                         this.clearingCompleted = true;
-                        this.clearError();
 
                         try {
                             await Promise.all(
@@ -879,13 +1286,7 @@
                                 }),
                             );
 
-                            const completedIds = new Set(
-                                completedTodos.map((todo) => todo.id),
-                            );
-
-                            this.todos = this.todos.filter(
-                                (todo) => !completedIds.has(todo.id),
-                            );
+                            await this.refreshAfterMutation();
                         } catch (_error) {
                             await this.loadTodos();
                             this.error =
