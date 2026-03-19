@@ -4,6 +4,7 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 use tokio::net::TcpListener;
+use tracing::info;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, fmt};
@@ -38,5 +39,6 @@ async fn main() {
     let port = 8080;
     let listner = TcpListener::bind((addr, port)).await.unwrap();
 
+    info!("Starting the server at http://localhost:{}", port);
     axum::serve(listner, app).await.unwrap();
 }
