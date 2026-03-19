@@ -1,10 +1,11 @@
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
+use sqlx::{QueryBuilder, Sqlite};
 use uuid::Uuid;
 
 use crate::error::{AppError, Result};
 use crate::models::Todo;
-use crate::schemas::CreateTodo;
+use crate::schemas::{CreateTodo, TodoFilters};
 use crate::state::AppState;
 
 pub async fn root(State(_state): State<AppState>) -> Result<&'static str> {
@@ -15,21 +16,43 @@ pub async fn health(State(_state): State<AppState>) -> Result<&'static str> {
     Ok("Ok")
 }
 
-pub async fn list_todos(State(state): State<AppState>) -> Result<Json<Vec<Todo>>> {
-    let todos = sqlx::query_as!(
-        Todo,
+pub async fn list_todos(
+    State(state): State<AppState>,
+    Query(filters): Query<TodoFilters>,
+) -> Result<Json<Vec<Todo>>> {
+    let mut query = QueryBuilder::<Sqlite>::new(
         r#"
         SELECT
-            id AS "id!: _",
+            id,
             title,
             completed,
-            created_at AS "created_at!: _",
-            updated_at AS "updated_at!: _"
+            created_at,
+            updated_at
         FROM todos
-        "#,
-    )
-    .fetch_all(&state.db)
-    .await?;
+        WHERE 1=1
+    "#,
+    );
+
+    if let Some(title) = filters.title {
+        let search_pattern = format!("%{}%", title);
+        query.push(" AND title LIKE ");
+        query.push_bind(search_pattern);
+    }
+
+    if let Some(completed) = filters.completed {
+        query.push(" AND completed = ");
+        query.push_bind(completed);
+    }
+
+    query.push(" ORDER BY created_at ");
+
+    query.push(" LIMIT ");
+    query.push_bind(filters.limit.unwrap_or(10));
+
+    query.push(" OFFSET ");
+    query.push_bind(filters.offset.unwrap_or(0));
+
+    let todos = query.build_query_as::<Todo>().fetch_all(&state.db).await?;
 
     Ok(Json(todos))
 }
@@ -84,6 +107,7 @@ pub async fn get_todo(State(state): State<AppState>, Path(id): Path<Uuid>) -> Re
 
     Ok(Json(todo))
 }
+
 pub async fn delete_todo(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
@@ -140,6 +164,7 @@ pub async fn todo_mark_complete(
 
     Ok(Json(todo))
 }
+
 pub async fn todo_mark_incomplete(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
