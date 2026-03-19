@@ -2,7 +2,7 @@
 
 A small JSON todo API built with Rust, Axum, SQLx, and SQLite.
 
-This project is part of my Rust/Axum portfolio work and focuses on the backend fundamentals of building an HTTP API: routing, shared application state, request parsing, error handling, database access, and migrations.
+This project is part of my Rust/Axum portfolio work and focuses on the backend fundamentals of building an HTTP API: routing, shared application state, request parsing, error handling, database access, migrations, request tracing, and query-driven list endpoints.
 
 ## Overview
 
@@ -19,13 +19,14 @@ Each todo includes:
 ## Features
 
 - Create a todo
-- List all todos
+- List todos with filtering and pagination
 - Fetch a single todo by ID
 - Delete a todo
 - Mark a todo as complete
 - Mark a todo as incomplete
 - Health check endpoint
 - Automatic SQLite migrations on startup
+- HTTP request tracing
 
 ## Tech Stack
 
@@ -36,6 +37,8 @@ Each todo includes:
 - SQLite
 - Serde
 - Chrono
+- Tower HTTP
+- Tracing
 - UUID v7
 
 ## API Endpoints
@@ -46,12 +49,23 @@ Base URL: `http://127.0.0.1:8080`
 | --- | --- | --- |
 | `GET` | `/` | Simple root endpoint |
 | `GET` | `/health` | Health check |
-| `GET` | `/todos` | List all todos |
+| `GET` | `/todos` | List todos with optional filters and pagination |
 | `POST` | `/todos` | Create a todo |
 | `GET` | `/todos/{id}` | Get a single todo |
 | `DELETE` | `/todos/{id}` | Delete a todo |
 | `POST` | `/todos/{id}/mark-complete` | Mark a todo complete |
 | `POST` | `/todos/{id}/mark-incomplete` | Mark a todo incomplete |
+
+### `GET /todos` Query Parameters
+
+The list endpoint supports optional filtering and pagination. Results are ordered by `created_at`.
+
+| Query Param | Type | Description | Default |
+| --- | --- | --- | --- |
+| `title` | string | Return todos whose title contains the provided text | none |
+| `completed` | boolean | Filter by completion status | none |
+| `limit` | integer | Maximum number of todos to return | `10` |
+| `offset` | integer | Number of matching todos to skip | `0` |
 
 ## Request / Response Examples
 
@@ -79,6 +93,12 @@ List todos:
 
 ```bash
 curl http://127.0.0.1:8080/todos
+```
+
+Filter and paginate todos:
+
+```bash
+curl "http://127.0.0.1:8080/todos?completed=false&title=Axum&limit=5&offset=0"
 ```
 
 Get one todo:
@@ -115,6 +135,12 @@ cargo run
 ```
 
 The server will start on `127.0.0.1:8080`.
+
+HTTP request tracing is enabled by default. You can override the log filter with `RUST_LOG`, for example:
+
+```bash
+RUST_LOG=axum_todo_list=debug,tower_http=info cargo run
+```
 
 On startup the application will:
 
@@ -161,11 +187,12 @@ migrations/      # SQLite migration files
 - The server host and port are currently hardcoded to `127.0.0.1:8080`
 - There is no authentication or frontend
 - Test coverage is still minimal
+- `GET /todos` sorting is currently fixed to `created_at`
 
 ## Possible Next Steps
 
 - Add update/edit support for todo titles
-- Add pagination and sorting to `GET /todos`
+- Add sorting options to `GET /todos`
 - Move configuration into environment variables
 - Add integration tests for the todo CRUD routes
 - Add request validation and better error response bodies
