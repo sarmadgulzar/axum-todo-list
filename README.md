@@ -203,6 +203,9 @@ This project is licensed under the MIT License. See [LICENSE](./LICENSE).
 
 ## Note on AI Usage
 
-The application code in this project was built without AI assistance.
+The Rust backend in this project was built without AI assistance.
 
-The only AI-assisted part of this repository was the generation of this README file.
+The AI-assisted parts of this repository are:
+
+- this README file
+- `assets/index.html`

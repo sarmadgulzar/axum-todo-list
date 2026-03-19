@@ -1,0 +1,904 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Todo List</title>
+        <script
+            defer
+            src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+        ></script>
+        <style>
+            :root {
+                --bg-a: #f5ead8;
+                --bg-b: #dfe9f3;
+                --surface: rgba(255, 252, 247, 0.86);
+                --surface-strong: #fffaf3;
+                --line: rgba(35, 29, 23, 0.12);
+                --ink: #241d18;
+                --muted: #6d635c;
+                --accent: #c85d38;
+                --accent-deep: #8f3d24;
+                --success: #1f7a5d;
+                --success-soft: rgba(31, 122, 93, 0.12);
+                --shadow: 0 28px 64px rgba(48, 38, 28, 0.14);
+                --radius-lg: 30px;
+                --radius-md: 20px;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                min-height: 100vh;
+                padding: 28px 16px 40px;
+                font-family: "Avenir Next", "Helvetica Neue", sans-serif;
+                color: var(--ink);
+                background:
+                    radial-gradient(
+                        circle at top left,
+                        rgba(255, 255, 255, 0.88),
+                        transparent 34%
+                    ),
+                    linear-gradient(160deg, var(--bg-a), var(--bg-b));
+            }
+
+            [x-cloak] {
+                display: none !important;
+            }
+
+            .app {
+                max-width: 1280px;
+                margin: 0 auto;
+                display: grid;
+                gap: 22px;
+                grid-template-columns: minmax(290px, 360px) minmax(0, 1fr);
+                min-height: calc(100vh - 68px);
+                align-items: stretch;
+            }
+
+            .panel {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: var(--radius-lg);
+                box-shadow: var(--shadow);
+                backdrop-filter: blur(18px);
+            }
+
+            .hero {
+                padding: 24px;
+                display: grid;
+                gap: 20px;
+                grid-template-rows: auto 1fr;
+                min-height: calc(100vh - 68px);
+                position: sticky;
+                top: 28px;
+            }
+
+            .eyebrow {
+                margin: 0 0 10px;
+                color: var(--accent-deep);
+                font-size: 0.82rem;
+                letter-spacing: 0.16em;
+                text-transform: uppercase;
+            }
+
+            h1 {
+                margin: 0;
+                font-size: clamp(2.3rem, 4vw, 3.6rem);
+                line-height: 0.95;
+                letter-spacing: -0.06em;
+            }
+
+            .hero-copy p {
+                margin: 12px 0 0;
+                color: var(--muted);
+                font-size: 0.98rem;
+                line-height: 1.6;
+            }
+
+            .stats {
+                display: grid;
+                gap: 10px;
+                align-content: end;
+            }
+
+            .stat {
+                padding: 16px 18px;
+                border-radius: var(--radius-md);
+                background: var(--surface-strong);
+                border: 1px solid var(--line);
+            }
+
+            .stat span {
+                display: block;
+            }
+
+            .stat-label {
+                color: var(--muted);
+                font-size: 0.8rem;
+                text-transform: uppercase;
+                letter-spacing: 0.12em;
+            }
+
+            .stat-value {
+                margin-top: 6px;
+                font-size: 1.8rem;
+                font-weight: 700;
+                letter-spacing: -0.04em;
+            }
+
+            .workspace {
+                padding: 20px;
+                min-height: calc(100vh - 68px);
+                display: flex;
+                flex-direction: column;
+            }
+
+            .composer {
+                display: grid;
+                gap: 12px;
+            }
+
+            .composer-label {
+                font-size: 0.95rem;
+                font-weight: 600;
+            }
+
+            .composer-row {
+                display: grid;
+                gap: 12px;
+                grid-template-columns: minmax(0, 1fr) auto;
+            }
+
+            .todo-input {
+                width: 100%;
+                border: 1px solid rgba(36, 29, 24, 0.14);
+                border-radius: 18px;
+                background: rgba(255, 255, 255, 0.9);
+                padding: 16px 18px;
+                font: inherit;
+                font-size: 1rem;
+                color: var(--ink);
+                outline: none;
+                transition:
+                    border-color 140ms ease,
+                    box-shadow 140ms ease;
+            }
+
+            .todo-input:focus {
+                border-color: rgba(200, 93, 56, 0.55);
+                box-shadow: 0 0 0 4px rgba(200, 93, 56, 0.1);
+            }
+
+            button {
+                border: none;
+                border-radius: 999px;
+                font: inherit;
+                cursor: pointer;
+                transition:
+                    transform 140ms ease,
+                    opacity 140ms ease,
+                    background-color 140ms ease,
+                    color 140ms ease;
+            }
+
+            button:hover {
+                transform: translateY(-1px);
+            }
+
+            button:disabled {
+                opacity: 0.65;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            .primary-button {
+                padding: 0 20px;
+                min-width: 130px;
+                background: var(--accent);
+                color: #fff;
+                font-weight: 600;
+            }
+
+            .toolbar {
+                margin-top: 16px;
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+            }
+
+            .list-region {
+                margin-top: 16px;
+                flex: 1;
+                min-height: 260px;
+                overflow: auto;
+                padding-right: 4px;
+            }
+
+            .filters {
+                display: inline-flex;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .filter-button,
+            .secondary-button,
+            .ghost-button {
+                padding: 11px 16px;
+            }
+
+            .filter-button {
+                background: rgba(255, 255, 255, 0.72);
+                color: var(--muted);
+                border: 1px solid transparent;
+            }
+
+            .filter-button.active {
+                background: var(--ink);
+                color: #fff;
+                border-color: var(--ink);
+            }
+
+            .secondary-button {
+                background: rgba(200, 93, 56, 0.12);
+                color: var(--accent-deep);
+            }
+
+            .secondary-button:disabled {
+                opacity: 0.4;
+            }
+
+            .notice {
+                margin-top: 16px;
+                padding: 14px 16px;
+                border-radius: 18px;
+                border: 1px solid transparent;
+                color: var(--muted);
+            }
+
+            .notice.error {
+                background: rgba(200, 93, 56, 0.08);
+                border-color: rgba(200, 93, 56, 0.18);
+                color: #7d311b;
+            }
+
+            .todo-list {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+                display: grid;
+                gap: 14px;
+            }
+
+            .todo-item {
+                display: grid;
+                grid-template-columns: auto minmax(0, 1fr) auto;
+                gap: 16px;
+                align-items: center;
+                padding: 18px 18px 18px 16px;
+                border-radius: 22px;
+                background: var(--surface-strong);
+                border: 1px solid rgba(36, 29, 24, 0.08);
+                transition:
+                    border-color 140ms ease,
+                    transform 140ms ease;
+            }
+
+            .todo-item:hover {
+                transform: translateY(-1px);
+                border-color: rgba(36, 29, 24, 0.16);
+            }
+
+            .todo-item.completed {
+                background: rgba(244, 250, 247, 0.92);
+            }
+
+            .toggle-button {
+                width: 44px;
+                height: 44px;
+                flex: none;
+                display: grid;
+                place-items: center;
+                border-radius: 50%;
+                padding: 0;
+                background: rgba(255, 255, 255, 0.72);
+                border: 2px solid rgba(36, 29, 24, 0.16);
+                color: var(--success);
+            }
+
+            .todo-item.completed .toggle-button {
+                background: var(--success);
+                color: #fff;
+                border-color: var(--success);
+            }
+
+            .toggle-mark {
+                font-size: 1.25rem;
+                line-height: 1;
+                font-weight: 700;
+                transform: translateY(-1px);
+            }
+
+            .todo-copy {
+                min-width: 0;
+            }
+
+            .todo-title {
+                margin: 0;
+                font-size: 1.05rem;
+                line-height: 1.45;
+                word-break: break-word;
+            }
+
+            .todo-item.completed .todo-title {
+                color: var(--muted);
+                text-decoration: line-through;
+                text-decoration-thickness: 2px;
+                text-decoration-color: rgba(31, 122, 93, 0.45);
+            }
+
+            .todo-state {
+                margin-top: 6px;
+                font-size: 0.88rem;
+                color: var(--muted);
+            }
+
+            .todo-item.completed .todo-state {
+                color: var(--success);
+            }
+
+            .ghost-button {
+                background: transparent;
+                color: var(--muted);
+                border: 1px solid rgba(36, 29, 24, 0.12);
+            }
+
+            .ghost-button:hover {
+                color: var(--ink);
+            }
+
+            .todo-actions {
+                display: flex;
+                justify-content: flex-end;
+            }
+
+            .empty-state {
+                padding: 34px 18px;
+                text-align: center;
+                border-radius: 24px;
+                background: rgba(255, 255, 255, 0.5);
+                border: 1px dashed rgba(36, 29, 24, 0.14);
+            }
+
+            .empty-state h2 {
+                margin: 0;
+                font-size: 1.4rem;
+                letter-spacing: -0.04em;
+            }
+
+            .empty-state p {
+                margin: 10px auto 0;
+                max-width: 30rem;
+                color: var(--muted);
+                line-height: 1.6;
+            }
+
+            @media (max-width: 980px) {
+                .app {
+                    grid-template-columns: 1fr;
+                    min-height: auto;
+                }
+
+                .hero {
+                    position: static;
+                    top: auto;
+                    min-height: auto;
+                }
+
+                .workspace {
+                    min-height: auto;
+                }
+
+                .stats {
+                    align-content: start;
+                }
+
+                .list-region {
+                    overflow: visible;
+                    padding-right: 0;
+                }
+            }
+
+            @media (max-width: 760px) {
+                body {
+                    padding: 16px 12px 28px;
+                }
+
+                .hero {
+                    padding: 24px;
+                }
+
+                .workspace {
+                    padding: 18px;
+                }
+
+                .composer-row {
+                    grid-template-columns: 1fr;
+                }
+
+                .primary-button {
+                    min-height: 52px;
+                }
+
+                .todo-item {
+                    grid-template-columns: auto minmax(0, 1fr);
+                }
+
+                .todo-actions {
+                    grid-column: 1 / -1;
+                    display: flex;
+                    justify-content: flex-end;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main class="app" x-data="todoApp()" x-init="loadTodos()">
+            <section class="panel hero">
+                <div class="hero-copy">
+                    <p class="eyebrow">Daily list</p>
+                    <h1>What needs to get done?</h1>
+                    <p>
+                        Add tasks, knock them out, and keep the list focused. No
+                        clutter, no extra fields, just the work that matters.
+                    </p>
+                </div>
+
+                <aside class="stats">
+                    <div class="stat">
+                        <span class="stat-label">Remaining</span>
+                        <span class="stat-value" x-text="remainingCount"></span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Completed</span>
+                        <span class="stat-value" x-text="completedCount"></span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Total</span>
+                        <span class="stat-value" x-text="todos.length"></span>
+                    </div>
+                </aside>
+            </section>
+
+            <section class="panel workspace">
+                <form class="composer" @submit.prevent="createTodo()">
+                    <label class="composer-label" for="todo-title">
+                        Add a task
+                    </label>
+                    <div class="composer-row">
+                        <input
+                            id="todo-title"
+                            class="todo-input"
+                            type="text"
+                            x-model="newTitle"
+                            x-ref="todoInput"
+                            placeholder="Write down the next thing to do"
+                            maxlength="140"
+                            autocomplete="off"
+                            :disabled="loading || saving"
+                        />
+                        <button
+                            type="submit"
+                            class="primary-button"
+                            :disabled="loading || saving || !newTitle.trim()"
+                        >
+                            <span x-show="!saving">Add task</span>
+                            <span x-show="saving" x-cloak>Adding...</span>
+                        </button>
+                    </div>
+                </form>
+
+                <div class="toolbar">
+                    <div
+                        class="filters"
+                        role="tablist"
+                        aria-label="Todo filters"
+                    >
+                        <button
+                            type="button"
+                            class="filter-button"
+                            :class="{ active: filter === 'all' }"
+                            @click="filter = 'all'"
+                        >
+                            All
+                        </button>
+                        <button
+                            type="button"
+                            class="filter-button"
+                            :class="{ active: filter === 'active' }"
+                            @click="filter = 'active'"
+                        >
+                            Active
+                        </button>
+                        <button
+                            type="button"
+                            class="filter-button"
+                            :class="{ active: filter === 'completed' }"
+                            @click="filter = 'completed'"
+                        >
+                            Completed
+                        </button>
+                    </div>
+
+                    <div class="filters">
+                        <button
+                            type="button"
+                            class="secondary-button"
+                            @click="clearCompleted()"
+                            :disabled="completedCount === 0 || clearingCompleted"
+                        >
+                            <span x-show="!clearingCompleted"
+                                >Clear completed</span
+                            >
+                            <span x-show="clearingCompleted" x-cloak
+                                >Clearing...</span
+                            >
+                        </button>
+                        <button
+                            type="button"
+                            class="ghost-button"
+                            @click="loadTodos()"
+                            :disabled="loading"
+                        >
+                            <span x-show="!loading">Refresh</span>
+                            <span x-show="loading" x-cloak>Loading...</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="list-region">
+                    <section class="notice" x-show="loading" x-cloak>
+                        Loading tasks...
+                    </section>
+
+                    <section
+                        class="notice error"
+                        x-show="error"
+                        x-text="error"
+                        x-cloak
+                    ></section>
+
+                    <ul
+                        class="todo-list"
+                        x-show="!loading && filteredTodos.length > 0"
+                        x-cloak
+                    >
+                        <template x-for="todo in filteredTodos" :key="todo.id">
+                            <li
+                                class="todo-item"
+                                :class="{ completed: todo.completed }"
+                            >
+                                <button
+                                    type="button"
+                                    class="toggle-button"
+                                    @click="toggleTodo(todo)"
+                                    :disabled="isBusy(todo.id)"
+                                    :aria-label="todo.completed ? 'Mark task as active' : 'Mark task as completed'"
+                                >
+                                    <span
+                                        class="toggle-mark"
+                                        aria-hidden="true"
+                                        x-text="todo.completed ? '✓' : ''"
+                                    ></span>
+                                </button>
+
+                                <div class="todo-copy">
+                                    <p
+                                        class="todo-title"
+                                        x-text="todo.title"
+                                    ></p>
+                                    <p
+                                        class="todo-state"
+                                        x-text="todo.completed ? 'Completed' : 'In progress'"
+                                    ></p>
+                                </div>
+
+                                <div class="todo-actions">
+                                    <button
+                                        type="button"
+                                        class="ghost-button"
+                                        @click="deleteTodo(todo)"
+                                        :disabled="isBusy(todo.id)"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </li>
+                        </template>
+                    </ul>
+
+                    <section
+                        class="empty-state"
+                        x-show="!loading && !error && filteredTodos.length === 0"
+                        x-cloak
+                    >
+                        <h2 x-text="emptyTitle"></h2>
+                        <p x-text="emptyBody"></p>
+                    </section>
+                </div>
+            </section>
+        </main>
+
+        <script>
+            function todoApp() {
+                return {
+                    todos: [],
+                    newTitle: "",
+                    filter: "all",
+                    loading: false,
+                    saving: false,
+                    clearingCompleted: false,
+                    error: "",
+                    busyMap: {},
+
+                    get remainingCount() {
+                        return this.todos.filter((todo) => !todo.completed)
+                            .length;
+                    },
+
+                    get completedCount() {
+                        return this.todos.filter((todo) => todo.completed)
+                            .length;
+                    },
+
+                    get filteredTodos() {
+                        if (this.filter === "active") {
+                            return this.todos.filter((todo) => !todo.completed);
+                        }
+
+                        if (this.filter === "completed") {
+                            return this.todos.filter((todo) => todo.completed);
+                        }
+
+                        return this.todos;
+                    },
+
+                    get emptyTitle() {
+                        if (this.filter === "active") {
+                            return "No active tasks";
+                        }
+
+                        if (this.filter === "completed") {
+                            return "No completed tasks";
+                        }
+
+                        return "Your list is clear";
+                    },
+
+                    get emptyBody() {
+                        if (this.filter === "active") {
+                            return "Everything is either finished or waiting to be added.";
+                        }
+
+                        if (this.filter === "completed") {
+                            return "Complete a task and it will show up here.";
+                        }
+
+                        return "Add a task above to start building your list.";
+                    },
+
+                    isBusy(id) {
+                        return Boolean(this.busyMap[id]);
+                    },
+
+                    setBusy(id, value) {
+                        if (value) {
+                            this.busyMap = { ...this.busyMap, [id]: true };
+                            return;
+                        }
+
+                        const next = { ...this.busyMap };
+                        delete next[id];
+                        this.busyMap = next;
+                    },
+
+                    replaceTodo(updatedTodo) {
+                        const index = this.todos.findIndex(
+                            (todo) => todo.id === updatedTodo.id,
+                        );
+
+                        if (index === -1) {
+                            this.todos.unshift(updatedTodo);
+                            return;
+                        }
+
+                        this.todos.splice(index, 1, updatedTodo);
+                    },
+
+                    clearError() {
+                        this.error = "";
+                    },
+
+                    async loadTodos() {
+                        this.loading = true;
+                        this.clearError();
+
+                        try {
+                            const response = await fetch("/todos?limit=100", {
+                                headers: {
+                                    Accept: "application/json",
+                                },
+                            });
+
+                            if (!response.ok) {
+                                throw new Error("Failed to load tasks.");
+                            }
+
+                            const todos = await response.json();
+                            this.todos = Array.isArray(todos)
+                                ? todos.reverse()
+                                : [];
+                        } catch (_error) {
+                            this.error =
+                                "Unable to load tasks right now. Check that the server is running and try again.";
+                        } finally {
+                            this.loading = false;
+                        }
+                    },
+
+                    async createTodo() {
+                        const title = this.newTitle.trim();
+
+                        if (!title) {
+                            return;
+                        }
+
+                        this.saving = true;
+                        this.clearError();
+
+                        try {
+                            const response = await fetch("/todos", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    Accept: "application/json",
+                                },
+                                body: JSON.stringify({ title }),
+                            });
+
+                            if (!response.ok) {
+                                throw new Error("Failed to create task.");
+                            }
+
+                            const todo = await response.json();
+                            this.todos.unshift(todo);
+                            this.newTitle = "";
+                            this.$refs.todoInput.focus();
+                        } catch (_error) {
+                            this.error =
+                                "Unable to add that task right now. Please try again.";
+                        } finally {
+                            this.saving = false;
+                        }
+                    },
+
+                    async toggleTodo(todo) {
+                        const path = todo.completed
+                            ? `/todos/${todo.id}/mark-incomplete`
+                            : `/todos/${todo.id}/mark-complete`;
+
+                        this.setBusy(todo.id, true);
+                        this.clearError();
+
+                        try {
+                            const response = await fetch(path, {
+                                method: "POST",
+                                headers: {
+                                    Accept: "application/json",
+                                },
+                            });
+
+                            if (!response.ok) {
+                                throw new Error("Failed to update task.");
+                            }
+
+                            const updated = await response.json();
+                            this.replaceTodo(updated);
+                        } catch (_error) {
+                            this.error =
+                                "Unable to update that task right now. Please try again.";
+                        } finally {
+                            this.setBusy(todo.id, false);
+                        }
+                    },
+
+                    async deleteTodo(todo) {
+                        this.setBusy(todo.id, true);
+                        this.clearError();
+
+                        try {
+                            const response = await fetch(`/todos/${todo.id}`, {
+                                method: "DELETE",
+                                headers: {
+                                    Accept: "application/json",
+                                },
+                            });
+
+                            if (!response.ok) {
+                                throw new Error("Failed to delete task.");
+                            }
+
+                            this.todos = this.todos.filter(
+                                (item) => item.id !== todo.id,
+                            );
+                        } catch (_error) {
+                            this.error =
+                                "Unable to delete that task right now. Please try again.";
+                        } finally {
+                            this.setBusy(todo.id, false);
+                        }
+                    },
+
+                    async clearCompleted() {
+                        const completedTodos = this.todos.filter(
+                            (todo) => todo.completed,
+                        );
+
+                        if (completedTodos.length === 0) {
+                            return;
+                        }
+
+                        this.clearingCompleted = true;
+                        this.clearError();
+
+                        try {
+                            await Promise.all(
+                                completedTodos.map(async (todo) => {
+                                    this.setBusy(todo.id, true);
+
+                                    const response = await fetch(
+                                        `/todos/${todo.id}`,
+                                        {
+                                            method: "DELETE",
+                                            headers: {
+                                                Accept: "application/json",
+                                            },
+                                        },
+                                    );
+
+                                    if (!response.ok) {
+                                        throw new Error(
+                                            "Failed to clear completed tasks.",
+                                        );
+                                    }
+                                }),
+                            );
+
+                            const completedIds = new Set(
+                                completedTodos.map((todo) => todo.id),
+                            );
+
+                            this.todos = this.todos.filter(
+                                (todo) => !completedIds.has(todo.id),
+                            );
+                        } catch (_error) {
+                            await this.loadTodos();
+                            this.error =
+                                "Unable to clear completed tasks right now. Please try again.";
+                        } finally {
+                            completedTodos.forEach((todo) =>
+                                this.setBusy(todo.id, false),
+                            );
+                            this.clearingCompleted = false;
+                        }
+                    },
+                };
+            }
+        </script>
+    </body>
+</html>

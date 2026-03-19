@@ -3,6 +3,7 @@ use axum::body::Body;
 use axum::http::{Request, Response};
 use axum::routing;
 use std::time::Duration;
+use tower_http::services::ServeFile;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 
@@ -21,7 +22,7 @@ pub fn create_router(state: AppState) -> Router {
         );
 
     Router::new()
-        .route("/", routing::get(handlers::root))
+        .route_service("/", ServeFile::new("assets/index.html"))
         .route("/health", routing::get(handlers::health))
         .route(
             "/todos",
